@@ -18,6 +18,9 @@ const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
 
+  // Backend API base URL
+  const API_BASE_URL = 'https://portfolio-tgfq.onrender.com';
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -31,16 +34,39 @@ const Contact = () => {
     setSubmitStatus(null);
 
     try {
-      const response = await axios.post('/api/contact', formData);
+      // Use the direct backend URL
+      const response = await axios.post(`${API_BASE_URL}/api/contact`, formData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout
+      });
       
       if (response.data.success) {
-        setSubmitStatus({ type: 'success', message: 'Message sent successfully!' });
+        setSubmitStatus({ 
+          type: 'success', 
+          message: 'Message sent successfully! I\'ll get back to you soon.' 
+        });
         setFormData({ name: '', email: '', message: '' });
       }
     } catch (error) {
+      console.error('Contact form error:', error);
+      
+      let errorMessage = 'Something went wrong. Please try again.';
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Request timeout. Please check your connection and try again.';
+      } else if (error.response) {
+        // Server responded with error status
+        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'No response from server. Please check your connection.';
+      }
+      
       setSubmitStatus({ 
         type: 'error', 
-        message: error.response?.data?.message || 'Something went wrong. Please try again.' 
+        message: errorMessage 
       });
     } finally {
       setIsSubmitting(false);
@@ -82,7 +108,7 @@ const Contact = () => {
       icon: FaPhone,
       title: 'Phone',
       value: '+91 6361429359',
-      link: 'tel:+91XXXXXXXXXX',
+      link: 'tel:+916361429359',
       color: 'from-blue-500 to-cyan-500'
     },
     {
@@ -281,7 +307,7 @@ const Contact = () => {
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full btn-primary-enhanced flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 text-white px-6 py-4 rounded-lg font-medium transition-all duration-300 hover:from-purple-600 hover:via-pink-600 hover:to-blue-600 hover:shadow-lg hover:shadow-purple-500/25 transform hover:-translate-y-1 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
                 variants={itemVariants}
                 whileHover={!isSubmitting ? { scale: 1.02 } : {}}
                 whileTap={!isSubmitting ? { scale: 0.98 } : {}}
@@ -310,8 +336,8 @@ const Contact = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className={`p-4 rounded-lg text-center flex items-center justify-center gap-2 ${
                     submitStatus.type === 'success' 
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                      : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                      : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
                   }`}
                 >
                   {submitStatus.type === 'success' ? (
