@@ -41,7 +41,7 @@ const Contact = () => {
           'Content-Type': 'application/json',
         },
         timeout: 15000,
-        withCredentials: false // Important: set to false for cross-origin requests
+        withCredentials: false
       });
       
       console.log('Response received:', response.data);
@@ -60,29 +60,34 @@ const Contact = () => {
         message: error.message,
         code: error.code,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        headers: error.response?.headers
       });
       
       let errorMessage = 'Something went wrong. Please try again.';
       
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Request timeout. Please check your connection and try again.';
-      } else if (error.response) {
+      if (error.response) {
         // Server responded with error status
-        if (error.response.status === 429) {
+        if (error.response.status === 400) {
+          // Validation error from backend
+          if (error.response.data && error.response.data.errors) {
+            const validationErrors = error.response.data.errors.map(err => err.msg).join(', ');
+            errorMessage = `Validation error: ${validationErrors}`;
+          } else {
+            errorMessage = error.response.data?.message || 'Invalid data submitted. Please check your inputs.';
+          }
+        } else if (error.response.status === 429) {
           errorMessage = 'Too many requests. Please try again later.';
         } else if (error.response.status === 413) {
           errorMessage = 'Message too large. Please shorten your message.';
         } else {
           errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
         }
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Request timeout. Please check your connection and try again.';
       } else if (error.request) {
-        // Request was made but no response received
-        if (error.message.includes('CORS')) {
-          errorMessage = 'CORS error: Please check backend configuration.';
-        } else {
-          errorMessage = 'No response from server. Please check your connection.';
-        }
+        errorMessage = 'No response from server. Please check your connection.';
       } else if (error.message.includes('Network Error')) {
         errorMessage = 'Network error. Please check your internet connection.';
       }
@@ -96,7 +101,7 @@ const Contact = () => {
     }
   };
 
-  // Rest of your component code remains the same...
+  // Rest of your component remains the same...
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -286,6 +291,8 @@ const Contact = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
+                  minLength="2"
+                  maxLength="50"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-dark-400 text-gray-900 dark:text-white transition-all duration-300"
                   placeholder="Enter your full name"
                 />
@@ -321,10 +328,15 @@ const Contact = () => {
                   value={formData.message}
                   onChange={handleChange}
                   required
+                  minLength="10"
+                  maxLength="1000"
                   rows="6"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-dark-400 text-gray-900 dark:text-white transition-all duration-300 resize-none"
                   placeholder="Tell me about your project..."
                 />
+                <div className="text-xs text-gray-500 mt-1">
+                  Minimum 10 characters, maximum 1000 characters
+                </div>
               </motion.div>
 
               {/* Enhanced Submit Button */}
