@@ -34,13 +34,17 @@ const Contact = () => {
     setSubmitStatus(null);
 
     try {
-      // Use the direct backend URL
+      console.log('Sending contact form data:', formData);
+      
       const response = await axios.post(`${API_BASE_URL}/api/contact`, formData, {
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 10000, // 10 second timeout
+        timeout: 15000,
+        withCredentials: false // Important: set to false for cross-origin requests
       });
+      
+      console.log('Response received:', response.data);
       
       if (response.data.success) {
         setSubmitStatus({ 
@@ -48,9 +52,16 @@ const Contact = () => {
           message: 'Message sent successfully! I\'ll get back to you soon.' 
         });
         setFormData({ name: '', email: '', message: '' });
+      } else {
+        throw new Error(response.data.message || 'Failed to send message');
       }
     } catch (error) {
-      console.error('Contact form error:', error);
+      console.error('Contact form error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       
       let errorMessage = 'Something went wrong. Please try again.';
       
@@ -58,10 +69,22 @@ const Contact = () => {
         errorMessage = 'Request timeout. Please check your connection and try again.';
       } else if (error.response) {
         // Server responded with error status
-        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+        if (error.response.status === 429) {
+          errorMessage = 'Too many requests. Please try again later.';
+        } else if (error.response.status === 413) {
+          errorMessage = 'Message too large. Please shorten your message.';
+        } else {
+          errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+        }
       } else if (error.request) {
         // Request was made but no response received
-        errorMessage = 'No response from server. Please check your connection.';
+        if (error.message.includes('CORS')) {
+          errorMessage = 'CORS error: Please check backend configuration.';
+        } else {
+          errorMessage = 'No response from server. Please check your connection.';
+        }
+      } else if (error.message.includes('Network Error')) {
+        errorMessage = 'Network error. Please check your internet connection.';
       }
       
       setSubmitStatus({ 
@@ -73,6 +96,7 @@ const Contact = () => {
     }
   };
 
+  // Rest of your component code remains the same...
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
